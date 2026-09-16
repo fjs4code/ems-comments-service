@@ -6,7 +6,7 @@ import com.fjs.algacomments.comments_service.api.client.ModerationServiceClient;
 import com.fjs.algacomments.comments_service.api.exception.GlobalExceptionHandler;
 import com.fjs.algacomments.comments_service.api.service.CommentService;
 import com.fjs.algacomments.comments_service.domain.model.Comment;
-import com.fjs.algacomments.comments_service.domain.model.identifier.TSIDCodec;
+import java.util.UUID;
 import com.fjs.algacomments.comments_service.domain.repository.CommentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -71,9 +71,11 @@ class CommentControllerTest {
         order.verify(moderationClient).moderate(moderation.capture());
         order.verify(repository).saveAndFlush(saved.capture());
         assertThat(moderation.getValue().text()).isEqualTo("Excelente conteúdo!");
-        assertThat(moderation.getValue().commentId()).isEqualTo(saved.getValue().getTSID());
+        assertThat(moderation.getValue().commentId()).isEqualTo(saved.getValue().getId().toString());
+        assertThat(saved.getValue().getId().version()).isEqualTo(7);
+        assertThat(saved.getValue().getId().variant()).isEqualTo(2);
         assertThat(saved.getValue().getAuthor()).isEqualTo("Ana");
-        assertThat(result.getResponse().getContentAsString()).contains(saved.getValue().getTSID());
+        assertThat(result.getResponse().getContentAsString()).contains(saved.getValue().getId().toString());
     }
 
     @Test
@@ -119,15 +121,23 @@ class CommentControllerTest {
     @Test
     @DisplayName("Consulta de comentário inexistente: retorna 404")
     void shouldReturnNotFoundForMissingComment() throws Exception {
-        String id = TSIDCodec.encode(123L);
-        when(repository.findById(123L)).thenReturn(Optional.empty());
+        UUID id = UUID.fromString("01950caa-1234-7000-8000-000000000001");
+        when(repository.findById(id)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/comments/{id}", id))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.detail").value("Comment not found: " + id));
 
-        verify(repository).findById(123L);
+        verify(repository).findById(id);
         verifyNoMoreInteractions(repository);
         verifyNoInteractions(moderationClient);
+    }
+    @Test
+    void shouldRejectInvalidUuid() throws Exception {
+        for (String id : new String[]{"invalid", "000000000003V", "1-1-1-1-1"}) {
+            mockMvc.perform(get("/api/comments/{id}", id))
+                    .andExpect(status().isBadRequest());
+        }
+        verifyNoInteractions(repository, moderationClient);
     }
 }

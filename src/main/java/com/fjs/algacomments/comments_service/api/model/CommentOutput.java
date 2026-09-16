@@ -10,7 +10,7 @@ public record CommentOutput(String id, String text, String author, OffsetDateTim
 
     public static CommentOutput from(Comment comment){
         return new CommentOutput(
-                comment.getTSID(),
+                comment.getId().toString(),
                 comment.getText(),
                 comment.getAuthor(),
                 comment.getCreatedAt()

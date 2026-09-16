@@ -1,7 +1,7 @@
 package com.fjs.algacomments.comments_service.domain.model;
 
 import com.fjs.algacomments.comments_service.api.model.CommentInput;
-import com.fjs.algacomments.comments_service.domain.model.identifier.TSIDEntity;
+import com.fjs.algacomments.comments_service.domain.model.identifier.UUIDv7Entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -16,7 +16,7 @@ import java.time.OffsetDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-public class Comment extends TSIDEntity {
+public class Comment extends UUIDv7Entity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String text;
     @Column(nullable = false)

@@ -8,7 +8,7 @@ import com.fjs.algacomments.comments_service.api.commons.CommentSpecifications;
 import com.fjs.algacomments.comments_service.api.model.CommentInput;
 import com.fjs.algacomments.comments_service.api.model.CommentOutput;
 import com.fjs.algacomments.comments_service.domain.model.Comment;
-import com.fjs.algacomments.comments_service.domain.model.identifier.TSIDCodec;
+import java.util.UUID;
 import com.fjs.algacomments.comments_service.domain.repository.CommentRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
@@ -35,17 +35,25 @@ public class CommentService {
     }
 
     private void validateWithCommentService(Comment comment) {
-        ModerationOutput moderationOutput = client.moderate(new ModerationInput(comment.getText(), comment.getTSID()));
+        ModerationOutput moderationOutput = client.moderate(new ModerationInput(comment.getText(), comment.getId().toString()));
         if(!moderationOutput.approved())
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT, moderationOutput.reason());
     }
 
-    public CommentOutput findById(String tsid){
-        long id = TSIDCodec.decode(tsid);
+    public CommentOutput findById(String uuid){
+        UUID id;
+        try {
+            id = UUID.fromString(uuid);
+            if (!id.toString().equalsIgnoreCase(uuid)) {
+                throw new IllegalArgumentException("Non-canonical UUID");
+            }
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid UUID: " + uuid, e);
+        }
         return repository.findById(id)
                 .map(CommentOutput::from)
                 .orElseThrow(
-                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Comment not found: "+tsid)
+                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Comment not found: "+uuid)
                 );
     }
 
@@ -54,6 +62,6 @@ public class CommentService {
     }
 
     private CommentOutput convertToModel(Comment comment) {
-        return new CommentOutput(comment.getTSID(), comment.getText(), comment.getAuthor(), comment.getCreatedAt());
+        return new CommentOutput(comment.getId().toString(), comment.getText(), comment.getAuthor(), comment.getCreatedAt());
     }
 }
